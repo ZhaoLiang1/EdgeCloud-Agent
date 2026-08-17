@@ -22,8 +22,12 @@ class Settings(BaseSettings):
     MILVUS_COLLECTION_NAME: str = os.getenv("MILVUS_COLLECTION_NAME", "doc_chunks")
     # 向量维度
     EMBEDDING_DIM: int = int(os.getenv("EMBEDDING_DIM", "1024"))
-
-    # 后续扩展：Milvus、大模型密钥都放这里
+    # Embedding配置
+    EMBEDDING_MODEL_NAME: str = os.getenv("EMBEDDING_MODEL_NAME")
+    EMBEDDING_MODEL_CACHE: str = os.getenv("EMBEDDING_MODEL_CACHE")
+    CHUNK_SIZE: int = int(os.getenv("CHUNK_SIZE", "512"))
+    CHUNK_OVERLAP: int = int(os.getenv("CHUNK_OVERLAP", "64"))
+    # 后续扩展：大模型密钥都放这里
 
 # 全局单例配置实例
 settings = Settings()

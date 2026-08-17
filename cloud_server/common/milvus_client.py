@@ -91,7 +91,7 @@ class MilvusClient:
             FieldSchema(
                 name="content",
                 dtype=DataType.VARCHAR,
-                max_length=65535,
+                max_length=4096,
                 description="分片文本原文",
             ),
             FieldSchema(
