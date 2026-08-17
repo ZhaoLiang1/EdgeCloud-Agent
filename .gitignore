@@ -1,3 +1,9 @@
+# 模型文件夹
+models/
+models/**
+*.gguf
+*.bin
+*.safetensors
 # ==================== Python ���� ====================
 venv/
 .venv/

@@ -22,7 +22,7 @@ reload=settings.DEBUG) 解释
    （5）reload=settings.DEBUG：只要在编辑器里保存了代码，服务器会自动重启并加载最新代码
 3、相关CMD命令
    创建虚拟环境：python -m venv venv（项目根目录 EdgeCloud-Agent）
-   激活虚拟环境：.\venv\Scripts\Activate.ps1（项目根目录 EdgeCloud-Agent）
+   激活虚拟环境：venv\Scripts\activate或.\venv\Scripts\Activate.ps1（项目根目录 EdgeCloud-Agent）
    安装依赖：pip install -r requirements.txt（虚拟，进入 cloud_server）
    运行项目：uvicorn main:app --reload
 

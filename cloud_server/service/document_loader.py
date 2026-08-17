@@ -1,14 +1,14 @@
 """
 文档加载服务
 ------------
-职责：读取本地 PDF / TXT 文件，提取纯文本内容，返回统一格式。
-
-今天只做"读取"，"分片"和"向量化"是 Day3 的事。
-输出格式：{"doc_name": 文件名, "full_text": 完整文本字符串}
+职责：读取本地 PDF / TXT 文件，提取纯文本内容，分片，返回统一格式。
 """
 
 import os
 import pdfplumber
+
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from config.settings import settings
 
 
 class DocumentLoader:
@@ -58,6 +58,32 @@ class DocumentLoader:
             f"文本长度 {len(full_text)} 字符"
         )
         return {"doc_name": doc_name, "full_text": full_text}
+
+    def load_and_split_document(self, file_path: str) -> list[str]:
+            """
+            统一入口：加载文档并直接返回分片列表
+            """
+            # 1. 检查文件是否存在
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(f"文件不存在: {file_path}")
+            
+            # 2. 获取文件后缀（转小写，避免 .PDF 和 .pdf 区别对待）
+            ext = os.path.splitext(file_path)[1].lower()
+            if ext not in self.SUPPORTED_EXTENSIONS:
+                raise ValueError(
+                    f"不支持的文件格式: {ext}，仅支持 {self.SUPPORTED_EXTENSIONS}"
+                )
+
+            # 3. 根据格式分发到对应方法
+            if ext == ".pdf":
+                full_text = self._load_pdf(file_path)
+            else:
+                full_text = self._load_txt(file_path)
+            
+            # 4. 简单清洗：去掉首尾空白
+            full_text = full_text.strip()
+            
+            return self.split_text(full_text)
 
     # ---------- PDF 解析 ----------
 
@@ -109,3 +135,17 @@ class DocumentLoader:
         raise UnicodeDecodeError(
             "utf-8/gbk", b"", 0, 1, f"无法识别文件编码: {file_path}"
         )
+    
+    # ---------- 文本分片 ----------
+
+    def split_text(self, text: str) -> list[str]:
+        """
+        文本分片
+        """
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=settings.CHUNK_SIZE,
+            chunk_overlap=settings.CHUNK_OVERLAP,
+            separators=["\n\n", "\n", "。", "！", "？", "；", "，", " ", ""]
+        )
+        chunks = splitter.split_text(text)
+        return chunks
