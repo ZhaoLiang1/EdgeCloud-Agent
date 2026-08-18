@@ -149,3 +149,39 @@ class DocumentLoader:
         )
         chunks = splitter.split_text(text)
         return chunks
+
+    def load_document(self, file_bytes: bytes, filename: str) -> str:
+        """
+        根据文件二进制和文件名，解析PDF/TXT，返回全文文本
+        :param file_bytes: 文件二进制流
+        :param filename: 原始文件名
+        :return: 拼接后的完整文本
+        """
+        suffix = filename.lower().split(".")[-1]
+        full_text = ""
+
+        if suffix == "txt":
+            full_text = file_bytes.decode("utf-8", errors="ignore")
+        elif suffix == "pdf":
+            # pdfplumber 从内存二进制加载pdf，不需要落地磁盘
+            import io
+            with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+                for page in pdf.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        full_text += page_text + "\n"
+        else:
+            raise ValueError(f"不支持解析文件后缀：{suffix}")
+
+        return full_text
+
+
+    def split_document(self, file_bytes: bytes, filename: str) -> list[str]:
+        """
+        对外统一入口：文件二进制 → 解析文本 → 分片
+        给rag_service直接调用】
+        """
+        text = self.load_document(file_bytes, filename)
+        if not text.strip():
+            return []
+        return self.split_text(text)
