@@ -25,8 +25,8 @@ class Settings(BaseSettings):
     # Embedding配置
     EMBEDDING_MODEL_NAME: str = os.getenv("EMBEDDING_MODEL_NAME")
     EMBEDDING_MODEL_CACHE: str = os.getenv("EMBEDDING_MODEL_CACHE")
-    CHUNK_SIZE: int = int(os.getenv("CHUNK_SIZE", "512"))
-    CHUNK_OVERLAP: int = int(os.getenv("CHUNK_OVERLAP", "64"))
+    CHUNK_SIZE: int = int(os.getenv("CHUNK_SIZE", "300"))
+    CHUNK_OVERLAP: int = int(os.getenv("CHUNK_OVERLAP", "60"))
     # 后续扩展：大模型密钥都放这里
 
 # 全局单例配置实例

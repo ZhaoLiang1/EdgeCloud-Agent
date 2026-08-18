@@ -24,22 +24,36 @@ from config.settings import settings
 class MilvusClient:
     """Milvus 操作封装"""
 
+    # 去掉单例
     # 类变量，保存唯一实例（单例）
-    _instance = None
+    #_instance = None
 
-    def __new__(cls, *args, **kwargs):
-        """__new__ 是 Python 创建对象的方法，在这里控制只创建一次"""
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
+    #def __new__(cls, *args, **kwargs):
+    #    """__new__ 是 Python 创建对象的方法，在这里控制只创建一次"""
+    #    if cls._instance is None:
+    #        cls._instance = super().__new__(cls)
+    #    return cls._instance
 
-    def __init__(self):
-        """初始化时连接 Milvus，并确保集合存在"""
-        # 用一个标志防止重复初始化
-        if not hasattr(self, "_connected"):
+    """Milvus 操作封装
+    连接全局复用，支持传入不同集合名，可操作多张向量表
+    """
+    # 静态变量：全局连接标记
+    _connected = False
+    # 静态缓存：{集合名: Collection对象}，防止重复load
+    _collection_cache = {}
+
+    def __init__(self, collection_name: str = settings.MILVUS_COLLECTION_NAME):
+        self.collection_name = collection_name
+        # 全局只建立一次连接
+        if not MilvusClient._connected:
             self._connect()
-            self.collection = self._get_or_create_collection()
-            self._connected = True
+            MilvusClient._connected = True
+
+        # 缓存命中则直接使用，不存在则创建/加载
+        if self.collection_name not in MilvusClient._collection_cache:
+            coll = self._get_or_create_collection()
+            MilvusClient._collection_cache[self.collection_name] = coll
+        self.collection = MilvusClient._collection_cache[self.collection_name]
 
     # ---------- 内部方法 ----------
 
@@ -58,7 +72,10 @@ class MilvusClient:
         如果集合已存在就直接获取，不存在就创建。
         集合结构见文件顶部的字段设计表。
         """
-        collection_name = settings.MILVUS_COLLECTION_NAME
+
+        #不要写死，修改为动态获取
+        #collection_name = settings.MILVUS_COLLECTION_NAME
+        collection_name = self.collection_name
 
         # 先判断集合是否已存在
         if utility.has_collection(collection_name):
@@ -147,3 +164,43 @@ class MilvusClient:
         """断开连接（项目结束时调用，平时不用）"""
         connections.disconnect("default")
         print("[Milvus] 已断开连接")
+
+    def insert(self, data_list: list[list]):
+        coll: Collection = self.collection
+        # 写入向量库
+        coll.insert(data_list)
+        # 持久化
+        coll.flush()
+        print(f"成功插入 {len(data_list)} 条文本向量")
+
+
+    def search(self, query_vector, top_k=4):
+        """
+        向量检索
+        :param query_vector: 向量数组
+        :param top_k: 返回条数
+        :return:
+        """
+        search_params = {
+            "metric_type": "COSINE",
+            "params": {"nprobe": 32}
+        }
+        collection: Collection = self.collection
+        results = collection.search(
+            data=[query_vector],
+            anns_field="embedding",
+            param=search_params,
+            limit=top_k,
+            output_fields=["doc_name", "chunk_index", "content", "embedding"]
+        )
+        output = []
+        for hits in results:
+            for hit in hits:
+                output.append({
+                    "score": hit.score,
+                    "doc_name": hit.entity.get("doc_name"),
+                    "chunk_index": hit.entity.get("chunk_index"), 
+                    "content": hit.entity.get("content"), 
+                    "embedding": hit.entity.get("embedding")
+                })
+        return output
