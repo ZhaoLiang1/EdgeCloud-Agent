@@ -2,7 +2,7 @@ from fastapi import APIRouter, UploadFile, File, Query
 
 from common.response import success, fail
 from common.exceptions import BusinessException
-from service.rag_service import save_document_to_milvus, search_knowledge
+from service.rag_service import save_document_to_milvus, search_knowledge, rag_query
 
 router = APIRouter(prefix="/document", tags=["文档管理"])
 
@@ -46,3 +46,22 @@ async def query_knowledge(
         return success(data=result, msg="检索成功")
     except Exception as e:
         return fail(msg=f"检索异常:{str(e)}")
+
+# ========== 新增完整RAG问答接口 ==========
+@router.get("/rag_chat")
+async def document_rag_chat(
+    query: str = Query(..., description="用户提问"),
+    collection_name: str = Query(..., description="向量集合名称"),
+    top_k: int = Query(3, description="向量召回条数"),
+    score_threshold: float = Query(0.6, description="相似度最低阈值")
+):
+    """
+    RAG问答接口：自动检索文档并基于文档生成答案
+    """
+    result = rag_query(
+        question=query,
+        collection_name=collection_name,
+        top_k=top_k,
+        score_threshold=score_threshold
+    )
+    return success(data=result)

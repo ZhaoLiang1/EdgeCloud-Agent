@@ -27,7 +27,11 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL_CACHE: str = os.getenv("EMBEDDING_MODEL_CACHE")
     CHUNK_SIZE: int = int(os.getenv("CHUNK_SIZE", "300"))
     CHUNK_OVERLAP: int = int(os.getenv("CHUNK_OVERLAP", "60"))
-    # 后续扩展：大模型密钥都放这里
+
+    # ========== LLM配置 ==========
+    LLM_BASE_URL: str = "https://open.bigmodel.cn/api/paas/v4/"#"http://127.0.0.1:11434/v1"  # 本地ollama/llama.cpp兼容地址，按需修改
+    LLM_API_KEY: str = "4419603b1df74ad9b3406aa17dedab44.hJ0n9nUIx3FpUZdF"#"llm_api_key"
+    LLM_MODEL_NAME: str = "glm-4-flash"
 
 # 全局单例配置实例
 settings = Settings()

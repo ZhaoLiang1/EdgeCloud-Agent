@@ -174,7 +174,7 @@ class MilvusClient:
         print(f"成功插入 {len(data_list)} 条文本向量")
 
 
-    def search(self, query_vector, top_k=4):
+    def search(self, query_vector, top_k=4, score_threshold: float = 0.6):
         """
         向量检索
         :param query_vector: 向量数组
@@ -196,11 +196,13 @@ class MilvusClient:
         output = []
         for hits in results:
             for hit in hits:
-                output.append({
-                    "score": hit.score,
-                    "doc_name": hit.entity.get("doc_name"),
-                    "chunk_index": hit.entity.get("chunk_index"), 
-                    "content": hit.entity.get("content"), 
-                    "embedding": hit.entity.get("embedding")
-                })
+                hit_score = hit.score
+                if hit_score > score_threshold: 
+                    output.append({
+                        "score": hit.score,
+                        "doc_name": hit.entity.get("doc_name"),
+                        "chunk_index": hit.entity.get("chunk_index"), 
+                        "content": hit.entity.get("content"), 
+                        "embedding": hit.entity.get("embedding")
+                    })
         return output

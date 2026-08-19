@@ -5,6 +5,9 @@ from config.settings import settings
 from fastapi import UploadFile
 from .document_loader import DocumentLoader
 
+from service.prompt_factory import build_rag_prompt
+from common.llm_client import llm_client
+
 
 def insert_chunks_to_milvus(chunk_texts: list[str], file_name: str):
     """
@@ -86,3 +89,39 @@ async def search_knowledge(query: str, collection_name: str, top_k: int = 4):
         top_k=top_k
     )
     return search_result
+
+def rag_query(question: str, collection_name: str, top_k: int = 3, score_threshold: float = 0.6):
+    """
+    完整RAG问答逻辑
+    :param question: 用户提问
+    :param collection_name: 向量库集合名称
+    :param top_k: 召回数量
+    :param score_threshold: 相似度阈值，低于该分数直接丢弃
+    :return: dict {"answer":大模型回答, "reference":召回的分片列表}
+    """
+    # 1. 用户问题向量化
+    query_vector = batch_text2vector([question])[0]
+
+    # 2. 获取Milvus客户端，执行向量检索，返回结果
+    client = MilvusClient(collection_name=collection_name)
+    reference_list = []
+    reference_list = client.search(
+        query_vector=query_vector, 
+        top_k=top_k, 
+        score_threshold=score_threshold
+    )
+
+    # 3. 整理纯文本内容为list,并构造Prompt调用大模型
+    if not reference_list: 
+        answer = "【知识库没有找到相关内容】"
+    else: 
+        context_texts = []
+        for reference in reference_list: 
+            context_texts.append(reference["content"])
+        full_prompt = build_rag_prompt(question, context_texts)
+        answer = llm_client.chat(prompt=full_prompt, temperature=0.1)
+
+    return {
+        "answer": answer,
+        "reference": reference_list
+    }
